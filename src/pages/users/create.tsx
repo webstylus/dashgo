@@ -15,6 +15,10 @@ import Link from 'next/link'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import * as yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
+import { api } from '../../services/api'
+import {useMutation} from "@tanstack/react-query";
+import {queryClient} from "../../services/queryClient";
+import {useRouter} from "next/router";
 
 type ICreateFormDataProps = {
   name: string
@@ -36,6 +40,18 @@ const createFormSchema = yup.object().shape({
 })
 
 export default function UserCreate() {
+  const router = useRouter()
+  const createUser = useMutation(async (user: ICreateFormDataProps) => {
+    const { data } = await api.post('users', {
+      user: { ...user, created_at: new Date() }
+    })
+
+    return data.user
+  }, {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries(['users'])
+    }
+  })
   const { register, handleSubmit, formState } = useForm<ICreateFormDataProps>({
     resolver: yupResolver(createFormSchema)
   })
@@ -45,8 +61,8 @@ export default function UserCreate() {
   const handleCreateUser: SubmitHandler<ICreateFormDataProps> = async (
     values
   ) => {
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    console.log(values)
+    await createUser.mutateAsync(values)
+    await router.push('/users')
   }
 
   return (
@@ -88,11 +104,13 @@ export default function UserCreate() {
                 label={'Senha'}
                 {...register('password')}
                 error={errors.password}
+                type={'password'}
               />
               <Input
                 label={'Confirmação da senha'}
                 {...register('password_confirmation')}
                 error={errors.password_confirmation}
+                type={'password'}
               />
             </SimpleGrid>
           </VStack>
@@ -102,7 +120,13 @@ export default function UserCreate() {
               <Link href={'/users'} passHref>
                 <Button colorScheme={'whiteAlpha'}>Cancelar</Button>
               </Link>
-              <Button type={'submit'} isLoading={isSubmitting} colorScheme={'pink'}>Salvar</Button>
+              <Button
+                type={'submit'}
+                isLoading={isSubmitting}
+                colorScheme={'pink'}
+              >
+                Salvar
+              </Button>
             </HStack>
           </Flex>
         </Box>

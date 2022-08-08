@@ -1,4 +1,10 @@
-import { createServer, Factory, Model, Response } from 'miragejs'
+import {
+  ActiveModelSerializer,
+  createServer,
+  Factory,
+  Model,
+  Response
+} from 'miragejs'
 import { faker } from '@faker-js/faker'
 
 interface IUserProps {
@@ -9,10 +15,12 @@ interface IUserProps {
 
 export function makeServer() {
   return createServer({
+    serializers: {
+      application: ActiveModelSerializer
+    },
     models: {
       user: Model.extend<Partial<IUserProps>>({})
     },
-
     factories: {
       user: Factory.extend({
         name(i: number) {
@@ -26,11 +34,9 @@ export function makeServer() {
         }
       })
     },
-
     seeds(server) {
       server.createList('user', 200)
     },
-
     routes() {
       this.namespace = 'api'
       this.timing = 750
@@ -52,6 +58,7 @@ export function makeServer() {
 
         return new Response(200, { 'x-total-count': String(total) }, { users })
       })
+      this.get('/users/:id')
       this.post('/users')
 
       this.namespace = '' //reset no namespace pra voltar usar rotas de api do next

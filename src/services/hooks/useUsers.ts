@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import {useQuery, UseQueryOptions, UseQueryResult} from '@tanstack/react-query'
 import { api } from '../api'
 
 interface IUserProps {
@@ -8,10 +8,21 @@ interface IUserProps {
   createdAt: string
 }
 
-export async function getUsers(): Promise<IUserProps[]> {
-  const { data } = await api.get('/users')
+interface IGetUsersResponseProps {
+  totalCount: number
+  users: IUserProps[]
+}
 
-  return data.users.map((user: IUserProps) => {
+export async function getUsers(page: number): Promise<IGetUsersResponseProps> {
+  const { data, headers } = await api.get('/users', {
+    params: {
+      page
+    }
+  })
+
+  const totalCount = Number(headers['x-total-count'])
+
+  const users = data.users.map((user: IUserProps) => {
     return {
       id: user.id,
       name: user.name,
@@ -23,10 +34,16 @@ export async function getUsers(): Promise<IUserProps[]> {
       })
     }
   })
+
+  return {
+    users,
+    totalCount
+  }
 }
 
-export function useUsers() {
-  return useQuery(['users'], getUsers, {
-    staleTime: 1000 * 5
-  })
+export function useUsers(page: number, options?: UseQueryOptions) {
+  return useQuery(['users', page], () => getUsers(page), {
+    staleTime: 1000 * 60 *10, //10minutos
+    ...options
+  }) as UseQueryResult<IGetUsersResponseProps, unknown>
 }
